@@ -26,16 +26,18 @@ func (d *PostgreSQLDB) Register(u entity.User) (entity.User, error) {
 	var userID uint
 
 	if err := d.db.QueryRow(
-		"INSERT INTO users(name, phone_number) VALUES($1, $2) RETURNING id",
+		"INSERT INTO users(name, phone_number, hashed_password) VALUES($1, $2, $3) RETURNING id",
 		u.Name,
 		u.PhoneNumber,
+		u.HashedPassword,
 	).Scan(&userID); err != nil {
 		return entity.User{}, fmt.Errorf("Cannot run the SQL command due to: %w", err)
 	}
 
 	return entity.User{
-		ID:          userID,
-		Name:        u.Name,
-		PhoneNumber: u.PhoneNumber,
+		ID:             userID,
+		Name:           u.Name,
+		PhoneNumber:    u.PhoneNumber,
+		HashedPassword: u.HashedPassword,
 	}, nil
 }

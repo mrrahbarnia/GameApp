@@ -31,7 +31,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 func registerUser(w http.ResponseWriter, r *http.Request) {
 	// curl -X POST "http://localhost:8090/users/register" \
 	// -H "Content-Type: application/json" \
-	// -d '{"Name": "testUser", "PhoneNumber": "09131234567"}'
+	// -d '{"name": "testUser", "phone_number": "09131234567", "password": "12345678"}'
 	if r.Method != http.MethodPost {
 		fmt.Fprintf(w, `{"error":"Invalid method"}`)
 	}
