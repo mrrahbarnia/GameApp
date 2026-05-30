@@ -1,0 +1,29 @@
+services:
+
+  db:
+    image: postgres:17.4
+    container_name: db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRESQL__USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRESQL__PASSWORD}
+      - POSTGRES_DB=${POSTGRESQL__DATABASE}
+    ports:
+      - "${POSTGRESQL__PORT}:${POSTGRESQL__PORT}"
+    volumes:
+      - devdb-volume:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+name: gameapp
+volumes:
+  devdb-volume:

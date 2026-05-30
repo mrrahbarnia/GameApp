@@ -2,8 +2,9 @@ package userservice
 
 import (
 	"fmt"
-	"game-app/entity"
-	"game-app/pkg/phonenumber"
+
+	"github.com/mrrahbarnia/GameApp/entity"
+	"github.com/mrrahbarnia/GameApp/pkg/phonenumber"
 )
 
 type Repository interface {

@@ -1,0 +1,41 @@
+package postgresql
+
+import (
+	"database/sql"
+	"fmt"
+
+	"github.com/mrrahbarnia/GameApp/entity"
+)
+
+func (d *PostgreSQLDB) IsPhoneNumberExist(phoneNumber string) (bool, error) {
+	var userID uint
+
+	err := d.db.QueryRow("SELECT id FROM users WHERE phone_number=$1", phoneNumber).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		} else {
+			return false, fmt.Errorf("Cannot run the SQL query due to: %w", err)
+		}
+	}
+
+	return true, nil
+}
+
+func (d *PostgreSQLDB) Register(u entity.User) (entity.User, error) {
+	var userID uint
+
+	if err := d.db.QueryRow(
+		"INSERT INTO users(name, phone_number) VALUES($1, $2) RETURNING id",
+		u.Name,
+		u.PhoneNumber,
+	).Scan(&userID); err != nil {
+		return entity.User{}, fmt.Errorf("Cannot run the SQL command due to: %w", err)
+	}
+
+	return entity.User{
+		ID:          userID,
+		Name:        u.Name,
+		PhoneNumber: u.PhoneNumber,
+	}, nil
+}
