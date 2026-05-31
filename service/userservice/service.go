@@ -11,7 +11,7 @@ import (
 type Repository interface {
 	IsPhoneNumberExist(phoneNumber string) (bool, error)
 	Register(user entity.User) (entity.User, error)
-	// GetUserByPhoneNumber(phoneNumber string)
+	GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error)
 }
 
 type Service struct {
@@ -29,6 +29,11 @@ func generatePasswordHash(password string) (string, error) {
 	}
 
 	return string(hash), nil
+}
+
+func comparePassword(hashedPassword, plainPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
+	return err == nil
 }
 
 // ******************************** Register usecase
@@ -106,12 +111,24 @@ type LoginResponse struct {
 	User entity.User
 }
 
-// func (s Service) Login(req RegisterRequest) (RegisterResponse, error) {
-// 	// Check phone number validity
-// 	if !phonenumber.IsValid(req.PhoneNumber) {
-// 		return RegisterResponse{}, fmt.Errorf("Phone number is not valid")
-// 	}
+func (s Service) Login(req LoginRequest) (LoginResponse, error) {
+	// Check phone number validity
+	if !phonenumber.IsValid(req.PhoneNumber) {
+		return LoginResponse{}, fmt.Errorf("Phone number is not valid")
+	}
 
-// 	// Check user exist
+	// Check user exist
+	dbUser, exist, err := s.repo.GetUserByPhoneNumber(req.PhoneNumber)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("Unexpected error: %w", err)
+	}
+	if !exist {
+		return LoginResponse{}, fmt.Errorf("Wrong credentials")
+	}
 
-// }
+	if !comparePassword(dbUser.HashedPassword, req.Password) {
+		return LoginResponse{}, fmt.Errorf("Wrong credentials")
+	}
+
+	return LoginResponse{}, nil
+}
