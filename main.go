@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/mrrahbarnia/GameApp/infrastructure/bcrypt"
+	"github.com/mrrahbarnia/GameApp/infrastructure/jwt"
 	"github.com/mrrahbarnia/GameApp/infrastructure/postgresql"
 	"github.com/mrrahbarnia/GameApp/service/userservice"
 )
@@ -58,7 +59,8 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 
 	pgRepo := postgresql.New()
 	bcrypt := bcrypt.New()
-	uSvc := userservice.New(pgRepo, bcrypt)
+	jwt := jwt.New()
+	uSvc := userservice.New(pgRepo, bcrypt, jwt)
 	_, err = uSvc.Register(uReq)
 	if err != nil {
 		w.Write(
@@ -99,8 +101,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 	pgRepo := postgresql.New()
 	bcrypt := bcrypt.New()
-	uSvc := userservice.New(pgRepo, bcrypt)
-	_, err = uSvc.Login(lReq)
+	jwt := jwt.New()
+	uSvc := userservice.New(pgRepo, bcrypt, jwt)
+	resp, err := uSvc.Login(lReq)
 	if err != nil {
 		w.Write(
 			[]byte(fmt.Sprintf(`{"error":"%s"}`, err.Error())),
@@ -109,5 +112,14 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(`{"message":"logged in successfully"}`))
+	data, err = json.Marshal(resp)
+	if err != nil {
+		w.Write(
+			[]byte(fmt.Sprintf(`{"error":"%s"}`, err.Error())),
+		)
+
+		return
+	}
+
+	w.Write(data)
 }

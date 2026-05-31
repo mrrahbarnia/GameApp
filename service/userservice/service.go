@@ -18,13 +18,20 @@ type Bcrypt interface {
 	ComparePassword(hashedPassword, plainPassword string) bool
 }
 
+type JWT interface {
+	GenerateToken(userID uint) (string, error)
+	// ValidateToken function extract UserID from token and returns it
+	ValidateToken(tokenString string) (uint, error)
+}
+
 type Service struct {
 	repo   Repository
 	bcrypt Bcrypt
+	jwt    JWT
 }
 
-func New(repo Repository, bcrypt Bcrypt) Service {
-	return Service{repo: repo, bcrypt: bcrypt}
+func New(repo Repository, bcrypt Bcrypt, jwt JWT) Service {
+	return Service{repo: repo, bcrypt: bcrypt, jwt: jwt}
 }
 
 // ******************************** Register usecase
@@ -99,7 +106,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	User entity.User
+	AccessToken string `json:"access_token"`
 }
 
 func (s Service) Login(req LoginRequest) (LoginResponse, error) {
@@ -121,5 +128,12 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 		return LoginResponse{}, fmt.Errorf("Wrong credentials")
 	}
 
-	return LoginResponse{}, nil
+	token, tErr := s.jwt.GenerateToken(dbUser.ID)
+	if tErr != nil {
+		return LoginResponse{}, fmt.Errorf("Unexpected error: %w", tErr)
+	}
+
+	return LoginResponse{
+		AccessToken: token,
+	}, nil
 }
