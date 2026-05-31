@@ -5,7 +5,6 @@ import (
 
 	"github.com/mrrahbarnia/GameApp/entity"
 	"github.com/mrrahbarnia/GameApp/pkg/phonenumber"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository interface {
@@ -14,26 +13,18 @@ type Repository interface {
 	GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error)
 }
 
+type Bcrypt interface {
+	GeneratePasswordHash(password string) (string, error)
+	ComparePassword(hashedPassword, plainPassword string) bool
+}
+
 type Service struct {
-	repo Repository
+	repo   Repository
+	bcrypt Bcrypt
 }
 
-func New(repo Repository) Service {
-	return Service{repo: repo}
-}
-
-func generatePasswordHash(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	return string(hash), nil
-}
-
-func comparePassword(hashedPassword, plainPassword string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
-	return err == nil
+func New(repo Repository, bcrypt Bcrypt) Service {
+	return Service{repo: repo, bcrypt: bcrypt}
 }
 
 // ******************************** Register usecase
@@ -75,7 +66,7 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	if len(req.Password) < 8 {
 		return RegisterResponse{}, fmt.Errorf("Password length must be greater than 8")
 	}
-	hashedPassword, err := generatePasswordHash(req.Password)
+	hashedPassword, err := s.bcrypt.GeneratePasswordHash(req.Password)
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("Unexpected error: %w", err)
 	}
@@ -126,7 +117,7 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 		return LoginResponse{}, fmt.Errorf("Wrong credentials")
 	}
 
-	if !comparePassword(dbUser.HashedPassword, req.Password) {
+	if !s.bcrypt.ComparePassword(dbUser.HashedPassword, req.Password) {
 		return LoginResponse{}, fmt.Errorf("Wrong credentials")
 	}
 

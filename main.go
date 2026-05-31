@@ -7,7 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/mrrahbarnia/GameApp/repository/postgresql"
+	"github.com/mrrahbarnia/GameApp/infrastructure/bcrypt"
+	"github.com/mrrahbarnia/GameApp/infrastructure/postgresql"
 	"github.com/mrrahbarnia/GameApp/service/userservice"
 )
 
@@ -56,7 +57,8 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pgRepo := postgresql.New()
-	uSvc := userservice.New(pgRepo)
+	bcrypt := bcrypt.New()
+	uSvc := userservice.New(pgRepo, bcrypt)
 	_, err = uSvc.Register(uReq)
 	if err != nil {
 		w.Write(
@@ -96,7 +98,8 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pgRepo := postgresql.New()
-	uSvc := userservice.New(pgRepo)
+	bcrypt := bcrypt.New()
+	uSvc := userservice.New(pgRepo, bcrypt)
 	_, err = uSvc.Login(lReq)
 	if err != nil {
 		w.Write(
