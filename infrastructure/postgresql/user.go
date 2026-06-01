@@ -59,3 +59,21 @@ func (d *PostgreSQLDB) GetUserByPhoneNumber(phoneNumber string) (entity.User, bo
 
 	return u, true, nil
 }
+
+func (d *PostgreSQLDB) GetUserById(userId uint) (entity.User, bool, error) {
+	u := entity.User{}
+	err := d.db.QueryRow(
+		"SELECT id, phone_number, name, hashed_password FROM users WHERE id=$1",
+		userId,
+	).Scan(&u.ID, &u.PhoneNumber, &u.Name, &u.HashedPassword)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return u, false, nil
+		}
+
+		return u, false, fmt.Errorf("Cannot run the SQL query due to: %w", err)
+	}
+
+	return u, true, nil
+}

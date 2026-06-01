@@ -6,11 +6,20 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/mrrahbarnia/GameApp/infrastructure/bcrypt"
-	"github.com/mrrahbarnia/GameApp/infrastructure/jwt"
 	"github.com/mrrahbarnia/GameApp/infrastructure/postgresql"
-	"github.com/mrrahbarnia/GameApp/service/userservice"
+	authservice "github.com/mrrahbarnia/GameApp/service/auth"
+	userservice "github.com/mrrahbarnia/GameApp/service/users"
+)
+
+const (
+	JwtSignKey                 = "jwt_secret"
+	AccessTokenSubject         = "ac"
+	RefreshTokenSubject        = "rt"
+	AccessTokenExpireDuration  = time.Hour * 24
+	RefreshTokenExpireDuration = time.Hour * 24 * 7
 )
 
 func main() {
@@ -18,8 +27,10 @@ func main() {
 	mux.HandleFunc("/health-check", healthCheck)
 	mux.HandleFunc("/users/register", registerUser)
 	mux.HandleFunc("/users/login", loginUser)
+	mux.HandleFunc("/users/profile", profile)
 
 	server := http.Server{Addr: ":8090", Handler: mux}
+	log.Println("Server is listening on port :8090")
 	log.Fatal(server.ListenAndServe())
 }
 
@@ -27,6 +38,8 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	// CURL http://localhost:8090/health-check
 	if r.Method != http.MethodGet {
 		fmt.Fprintf(w, `{"error":"Invalid method"}`)
+
+		return
 	}
 	fmt.Fprint(w, `{"message":"Everything works fine"}`)
 }
@@ -37,6 +50,8 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	// -d '{"name": "testUser", "phone_number": "09131234567", "password": "12345678"}'
 	if r.Method != http.MethodPost {
 		fmt.Fprintf(w, `{"error":"Invalid method"}`)
+
+		return
 	}
 
 	data, err := io.ReadAll(r.Body)
@@ -59,8 +74,10 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 
 	pgRepo := postgresql.New()
 	bcrypt := bcrypt.New()
-	jwt := jwt.New()
-	uSvc := userservice.New(pgRepo, bcrypt, jwt)
+	authSvc := authservice.New(JwtSignKey, AccessTokenSubject,
+		RefreshTokenSubject, AccessTokenExpireDuration, RefreshTokenExpireDuration)
+	uSvc := userservice.New(pgRepo, bcrypt, authSvc)
+
 	_, err = uSvc.Register(uReq)
 	if err != nil {
 		w.Write(
@@ -74,11 +91,11 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
-	// curl -X POST "http://localhost:8090/users/login" \
-	// -H "Content-Type: application/json" \
-	// -d '{"phone_number": "09131234567", "password": "12345678"}'
+
 	if r.Method != http.MethodPost {
 		fmt.Fprintf(w, `{"error":"Invalid method"}`)
+
+		return
 	}
 
 	data, err := io.ReadAll(r.Body)
@@ -101,8 +118,10 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 	pgRepo := postgresql.New()
 	bcrypt := bcrypt.New()
-	jwt := jwt.New()
-	uSvc := userservice.New(pgRepo, bcrypt, jwt)
+	authSvc := authservice.New(JwtSignKey, AccessTokenSubject,
+		RefreshTokenSubject, AccessTokenExpireDuration, RefreshTokenExpireDuration)
+	uSvc := userservice.New(pgRepo, bcrypt, authSvc)
+
 	resp, err := uSvc.Login(lReq)
 	if err != nil {
 		w.Write(
@@ -117,6 +136,56 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		w.Write(
 			[]byte(fmt.Sprintf(`{"error":"%s"}`, err.Error())),
 		)
+
+		return
+	}
+
+	w.Write(data)
+}
+
+func profile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		fmt.Fprintf(w, `{"error":"Invalid method"}`)
+
+		return
+	}
+
+	authSvc := authservice.New(
+		JwtSignKey,
+		AccessTokenSubject,
+		RefreshTokenSubject,
+		AccessTokenExpireDuration,
+		RefreshTokenExpireDuration,
+	)
+
+	authToken := r.Header.Get("Authorization")
+	claims, err := authSvc.ParseToken(authToken)
+	if err != nil {
+		w.Write(
+			[]byte(fmt.Sprintf("Token is not valid")),
+		)
+
+		return
+	}
+
+	pgRepo := postgresql.New()
+	bcrypt := bcrypt.New()
+
+	userSvc := userservice.New(pgRepo, bcrypt, authSvc)
+	resp, err := userSvc.Profile(userservice.ProfileRequest{UserID: claims.UserID})
+	if err != nil {
+		w.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
+		return
+	}
+
+	data, err := json.Marshal(resp)
+	if err != nil {
+		w.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
 
 		return
 	}

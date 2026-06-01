@@ -11,6 +11,12 @@ type Repository interface {
 	IsPhoneNumberExist(phoneNumber string) (bool, error)
 	Register(user entity.User) (entity.User, error)
 	GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error)
+	GetUserById(userId uint) (entity.User, bool, error)
+}
+
+type AuthGenerator interface {
+	CreateAccessToken(user entity.User) (string, error)
+	CreateRefreshToken(user entity.User) (string, error)
 }
 
 type Bcrypt interface {
@@ -18,20 +24,14 @@ type Bcrypt interface {
 	ComparePassword(hashedPassword, plainPassword string) bool
 }
 
-type JWT interface {
-	GenerateToken(userID uint) (string, error)
-	// ValidateToken function extract UserID from token and returns it
-	ValidateToken(tokenString string) (uint, error)
-}
-
 type Service struct {
+	auth   AuthGenerator
 	repo   Repository
 	bcrypt Bcrypt
-	jwt    JWT
 }
 
-func New(repo Repository, bcrypt Bcrypt, jwt JWT) Service {
-	return Service{repo: repo, bcrypt: bcrypt, jwt: jwt}
+func New(repo Repository, bcrypt Bcrypt, authGenerator AuthGenerator) Service {
+	return Service{repo: repo, bcrypt: bcrypt, auth: authGenerator}
 }
 
 // ******************************** Register usecase
@@ -106,7 +106,8 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken string `json:"access_token"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (s Service) Login(req LoginRequest) (LoginResponse, error) {
@@ -128,12 +129,42 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 		return LoginResponse{}, fmt.Errorf("Wrong credentials")
 	}
 
-	token, tErr := s.jwt.GenerateToken(dbUser.ID)
-	if tErr != nil {
-		return LoginResponse{}, fmt.Errorf("Unexpected error: %w", tErr)
+	accessToken, aErr := s.auth.CreateAccessToken(dbUser)
+	refreshToken, rErr := s.auth.CreateRefreshToken(dbUser)
+	if aErr != nil {
+		return LoginResponse{}, fmt.Errorf("Unexpected error: %w", aErr)
+	}
+	if rErr != nil {
+		return LoginResponse{}, fmt.Errorf("Unexpected error: %w", rErr)
 	}
 
 	return LoginResponse{
-		AccessToken: token,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
+}
+
+// ******************************** Get profile usecase
+
+type ProfileRequest struct {
+	UserID uint
+}
+
+type ProfileResponse struct {
+	Name string `json:"name"`
+}
+
+func (s Service) Profile(req ProfileRequest) (ProfileResponse, error) {
+	dbUser, exist, err := s.repo.GetUserById(req.UserID)
+	if err != nil {
+		return ProfileResponse{}, fmt.Errorf("Unexpected error: %w", err)
+	}
+	if !exist {
+		return ProfileResponse{}, fmt.Errorf("Unexpected error: %w", err)
+	}
+
+	return ProfileResponse{
+		Name: dbUser.Name,
+	}, nil
+
 }
