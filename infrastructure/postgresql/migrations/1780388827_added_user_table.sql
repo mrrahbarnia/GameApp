@@ -1,7 +1,10 @@
+-- +migrate Up
 CREATE TABLE users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name VARCHAR(255) NOT NULL,
-    hashed_password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- +migrate Down
+DROP TABLE users;
