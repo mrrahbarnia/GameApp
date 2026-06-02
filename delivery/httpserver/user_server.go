@@ -23,3 +23,33 @@ func (s Server) userRegister(c *echo.Context) error {
 		return c.JSON(http.StatusCreated, resp)
 	}
 }
+
+func (s Server) login(c *echo.Context) error {
+	var req userservice.LoginRequest
+
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid payload")
+	}
+
+	if resp, err := s.userSvc.Login(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	} else {
+		return c.JSON(http.StatusOK, resp)
+	}
+}
+
+func (s Server) profile(c *echo.Context) error {
+	authToken := c.Request().Header.Get("Authorization")
+
+	claims, err := s.authSvc.ParseToken(authToken)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
+	resp, err := s.userSvc.Profile(userservice.ProfileRequest{UserID: claims.UserID})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
