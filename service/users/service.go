@@ -5,6 +5,7 @@ import (
 
 	"github.com/mrrahbarnia/GameApp/entity"
 	"github.com/mrrahbarnia/GameApp/pkg/phonenumber"
+	"github.com/mrrahbarnia/GameApp/pkg/richerror"
 )
 
 type Repository interface {
@@ -52,28 +53,41 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	// TODO - We should verify phone number by verification code
 	// Check phone number validity
 	if !phonenumber.IsValid(req.PhoneNumber) {
-		return RegisterResponse{}, fmt.Errorf("Phone number is not valid")
+		return RegisterResponse{},
+			richerror.New("userservice.Register").
+				WithKind(richerror.KindInvalid).
+				WithMessage("phone_number is not valid").
+				WithMeta(map[string]interface{}{"phone_number": req.PhoneNumber})
 	}
 
 	// Check phone number uniqeness
 	if exist, err := s.repo.IsPhoneNumberExist(req.PhoneNumber); err != nil || exist {
 		if err != nil {
-			return RegisterResponse{}, fmt.Errorf("Unexpected error: %w", err)
+			return RegisterResponse{},
+				richerror.New("userservice.Register").
+					WithErr(err).
+					WithKind(richerror.KindUnexpected)
 		}
 
 		if exist {
-			return RegisterResponse{}, fmt.Errorf("Phone number is not unique")
+			return RegisterResponse{},
+				richerror.New("userservice.Register").
+					WithKind(richerror.KindConflict).
+					WithMessage("phone_number is already exist").
+					WithMeta(map[string]interface{}{"phone_number": req.PhoneNumber})
 		}
 	}
 
 	// Validate name
 	if len(req.Name) < 3 {
-		return RegisterResponse{}, fmt.Errorf("Name length must be greater than 3")
+		return RegisterResponse{},
+			fmt.Errorf("Name length must be greater than 3")
 	}
 
 	// Validate password
 	if len(req.Password) < 8 {
-		return RegisterResponse{}, fmt.Errorf("Password length must be greater than 8")
+		return RegisterResponse{},
+			fmt.Errorf("Password length must be greater than 8")
 	}
 	hashedPassword, err := s.bcrypt.GeneratePasswordHash(req.Password)
 	if err != nil {
@@ -161,10 +175,12 @@ type ProfileResponse struct {
 func (s Service) Profile(req ProfileRequest) (ProfileResponse, error) {
 	dbUser, exist, err := s.repo.GetUserById(req.UserID)
 	if err != nil {
-		return ProfileResponse{}, fmt.Errorf("Unexpected error: %w", err)
+		return ProfileResponse{},
+			richerror.New("userservice.Profile").WithErr(err).WithMeta(map[string]interface{}{"req": req})
 	}
 	if !exist {
-		return ProfileResponse{}, fmt.Errorf("Unexpected error: %w", err)
+		return ProfileResponse{},
+			richerror.New("userservice.Profile").WithKind(richerror.KindNotFound)
 	}
 
 	return ProfileResponse{

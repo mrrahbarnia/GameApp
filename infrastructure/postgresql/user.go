@@ -2,9 +2,10 @@ package postgresql
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/mrrahbarnia/GameApp/entity"
+	"github.com/mrrahbarnia/GameApp/pkg/errmsg"
+	"github.com/mrrahbarnia/GameApp/pkg/richerror"
 )
 
 func (d *PostgreSQLDB) IsPhoneNumberExist(phoneNumber string) (bool, error) {
@@ -15,7 +16,9 @@ func (d *PostgreSQLDB) IsPhoneNumberExist(phoneNumber string) (bool, error) {
 		if err == sql.ErrNoRows {
 			return false, nil
 		} else {
-			return false, fmt.Errorf("Cannot run the SQL query due to: %w", err)
+			return false, richerror.New("postgresql.IsPhoneNumberExist").
+				WithErr(err).WithMessage(errmsg.ErrorMsgCantScanQueryResult).
+				WithKind(richerror.KindUnexpected)
 		}
 	}
 
@@ -31,7 +34,9 @@ func (d *PostgreSQLDB) Register(u entity.User) (entity.User, error) {
 		u.PhoneNumber,
 		u.HashedPassword,
 	).Scan(&userID); err != nil {
-		return entity.User{}, fmt.Errorf("Cannot run the SQL command due to: %w", err)
+		return entity.User{}, richerror.New("postgresql.Register").
+			WithErr(err).WithMessage(errmsg.ErrorMsgCantScanQueryResult).
+			WithKind(richerror.KindUnexpected)
 	}
 
 	return entity.User{
@@ -54,7 +59,9 @@ func (d *PostgreSQLDB) GetUserByPhoneNumber(phoneNumber string) (entity.User, bo
 			return u, false, nil
 		}
 
-		return u, false, fmt.Errorf("Cannot run the SQL query due to: %w", err)
+		return u, false, richerror.New("postgresql.GetUserByPhoneNumber").
+			WithErr(err).WithMessage(errmsg.ErrorMsgCantScanQueryResult).
+			WithKind(richerror.KindUnexpected)
 	}
 
 	return u, true, nil
@@ -72,7 +79,10 @@ func (d *PostgreSQLDB) GetUserById(userId uint) (entity.User, bool, error) {
 			return u, false, nil
 		}
 
-		return u, false, fmt.Errorf("Cannot run the SQL query due to: %w", err)
+		return u, false,
+			richerror.New("postgresql.GetUserById").
+				WithErr(err).WithMessage(errmsg.ErrorMsgCantScanQueryResult).
+				WithKind(richerror.KindUnexpected)
 	}
 
 	return u, true, nil
