@@ -4,17 +4,23 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+	"github.com/mrrahbarnia/GameApp/pkg/httpmsg"
+	"github.com/mrrahbarnia/GameApp/presentation/dto"
 	userservice "github.com/mrrahbarnia/GameApp/service/users"
 )
 
 func (s Server) userRegister(c *echo.Context) error {
-	// curl -X POST "http://localhost:8090/users/register" \
-	// -H "Content-Type: application/json" \
-	// -d '{"name": "testUser", "phone_number": "09131234567", "password": "12345678"}'
-	var req userservice.RegisterRequest
+	var req dto.RegisterRequest
 
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid payload")
+	}
+
+	errFields, err := req.Validate()
+	if err != nil {
+		msg, code := httpmsg.Error(err)
+
+		return c.JSON(code, map[string]any{"message": msg, "errors": errFields})
 	}
 
 	if resp, err := s.userSvc.Register(req); err != nil {
@@ -25,7 +31,7 @@ func (s Server) userRegister(c *echo.Context) error {
 }
 
 func (s Server) login(c *echo.Context) error {
-	var req userservice.LoginRequest
+	var req dto.LoginRequest
 
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid payload")

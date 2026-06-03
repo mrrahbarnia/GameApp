@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/mrrahbarnia/GameApp/config"
-	"github.com/mrrahbarnia/GameApp/delivery/httpserver"
 	"github.com/mrrahbarnia/GameApp/infrastructure/bcrypt"
 	"github.com/mrrahbarnia/GameApp/infrastructure/postgresql"
+	"github.com/mrrahbarnia/GameApp/presentation/httpserver"
 	authservice "github.com/mrrahbarnia/GameApp/service/auth"
 	userservice "github.com/mrrahbarnia/GameApp/service/users"
 )

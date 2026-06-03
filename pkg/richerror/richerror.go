@@ -44,7 +44,7 @@ func (r RichError) WithKind(kind Kind) RichError {
 	return r
 }
 
-func (r RichError) WithMeta(meta map[string]interface{}) RichError {
+func (r RichError) WithMeta(meta map[string]any) RichError {
 	r.meta = meta
 	return r
 }

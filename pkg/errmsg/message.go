@@ -4,5 +4,6 @@ const (
 	ErrorMsgNotFound            = "record not found"
 	ErrorMsgConflict            = "record is already exist"
 	ErrorMsgCantScanQueryResult = "can't scan query result"
-	SomethingWentWrong          = "something went wrong"
+	ErrorMsgSomethingWentWrong  = "something went wrong"
+	ErrorMsgInvalidInput        = "invalid input"
 )
