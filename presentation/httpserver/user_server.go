@@ -37,6 +37,13 @@ func (s Server) login(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid payload")
 	}
 
+	errFields, err := req.Validate()
+	if err != nil {
+		msg, code := httpmsg.Error(err)
+
+		return c.JSON(code, map[string]any{"message": msg, "errors": errFields})
+	}
+
 	if resp, err := s.userSvc.Login(req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	} else {
