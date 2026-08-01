@@ -6,18 +6,18 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/mrrahbarnia/GameApp/config"
+	"github.com/mrrahbarnia/GameApp/presentation/http/user_handler"
 	authservice "github.com/mrrahbarnia/GameApp/service/auth"
 	userservice "github.com/mrrahbarnia/GameApp/service/users"
 )
 
 type Server struct {
-	config  config.Config
-	userSvc userservice.Service
-	authSvc authservice.Service
+	config      config.Config
+	userHandler user_handler.Handler
 }
 
-func New(config config.Config, userSvc userservice.Service, authSvc authservice.Service) Server {
-	return Server{config: config, userSvc: userSvc, authSvc: authSvc}
+func New(config config.Config, authSvc authservice.Service, userSvc userservice.Service) Server {
+	return Server{config: config, userHandler: user_handler.New(userSvc, authSvc)}
 }
 
 func (s Server) Serve() {
@@ -28,11 +28,7 @@ func (s Server) Serve() {
 
 	e.GET("/health-check", s.healthCheck)
 
-	// ========= users routes
-	usersGroup := e.Group("/users")
-	usersGroup.POST("/register", s.userRegister)
-	usersGroup.POST("/login", s.login)
-	usersGroup.GET("/profile", s.profile)
+	s.userHandler.SetUserRoutes(e)
 
 	if err := e.Start(":8090"); err != nil {
 		slog.Error("failed to start server", "error", err)

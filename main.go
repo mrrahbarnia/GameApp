@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/mrrahbarnia/GameApp/config"
 	"github.com/mrrahbarnia/GameApp/infrastructure/bcrypt"
 	"github.com/mrrahbarnia/GameApp/infrastructure/postgresql"
-	"github.com/mrrahbarnia/GameApp/presentation/httpserver"
+	httpserver "github.com/mrrahbarnia/GameApp/presentation/http"
+
 	authservice "github.com/mrrahbarnia/GameApp/service/auth"
 	userservice "github.com/mrrahbarnia/GameApp/service/users"
 )
@@ -40,7 +42,8 @@ func main() {
 
 	authSvc, userSvc := setupServices(cfg)
 
-	server := httpserver.New(cfg, userSvc, authSvc)
+	server := httpserver.New(cfg, authSvc, userSvc)
+	fmt.Println("start echo server")
 	server.Serve()
 
 }
