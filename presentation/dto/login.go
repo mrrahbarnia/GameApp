@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/mrrahbarnia/GameApp/pkg/errmsg"
 	"github.com/mrrahbarnia/GameApp/pkg/richerror"
 )
 
@@ -38,6 +39,7 @@ func (req LoginRequest) Validate() (map[string]string, error) {
 			richerror.New("dto.login").
 				WithErr(err).
 				WithKind(richerror.KindInvalid).
+				WithMessage(errmsg.ErrorMsgInvalidInput).
 				WithMeta(map[string]any{"req": req})
 	}
 

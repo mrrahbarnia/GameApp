@@ -40,6 +40,7 @@ func New(repo Repository, bcrypt Bcrypt, authGenerator AuthGenerator) Service {
 func (s Service) Register(req dto.RegisterRequest) (dto.RegisterResponse, error) {
 	if exist, err := s.repo.IsPhoneNumberExist(req.PhoneNumber); err != nil || exist {
 		if err != nil {
+
 			return dto.RegisterResponse{},
 				richerror.New("userservice.Register").
 					WithErr(err).

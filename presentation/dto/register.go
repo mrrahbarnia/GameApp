@@ -24,7 +24,6 @@ func (req RegisterRequest) Validate() (map[string]string, error) {
 	if err := validation.ValidateStruct(
 		&req,
 		validation.Field(&req.Name, validation.Required, validation.Length(3, 255)),
-		// Todo - read password regex from .env
 		validation.Field(&req.Password, validation.Required, validation.Match(regexp.MustCompile(`^.{8,}$`))),
 		validation.Field(&req.PhoneNumber, validation.Required, validation.Match(regexp.MustCompile(phoneNumberRegex))),
 	); err != nil {
