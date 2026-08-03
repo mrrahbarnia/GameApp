@@ -17,7 +17,7 @@ type Server struct {
 }
 
 func New(config config.Config, authSvc authservice.Service, userSvc userservice.Service) Server {
-	return Server{config: config, userHandler: user_handler.New(userSvc, authSvc)}
+	return Server{config: config, userHandler: user_handler.New(userSvc, config.Auth, authSvc)}
 }
 
 func (s Server) Serve() {

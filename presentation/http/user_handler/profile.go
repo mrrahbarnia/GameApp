@@ -5,17 +5,12 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/mrrahbarnia/GameApp/presentation/dto"
+	"github.com/mrrahbarnia/GameApp/presentation/http/dependencies"
 )
 
 func (h Handler) profile(c *echo.Context) error {
-	authToken := c.Request().Header.Get("Authorization")
-
-	claims, err := h.authSvc.ParseToken(authToken)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
-	}
-
-	result, err := h.userSvc.Profile(claims.UserID)
+	userID := dependencies.GetUser(c)
+	result, err := h.userSvc.Profile(userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

@@ -8,6 +8,16 @@ import (
 	"github.com/mrrahbarnia/GameApp/presentation/dto"
 )
 
+// Login godoc
+// @Summary      Login API
+// @Description  Returns access and refresh tokens
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.LoginRequest true "Login credentials"
+// @Success      200  {object}  dto.LoginResponse
+// @Failure      404  {object}  map[string]string
+// @Router       /users/login [post]
 func (h Handler) login(c *echo.Context) error {
 	var req dto.LoginRequest
 

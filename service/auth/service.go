@@ -1,7 +1,6 @@
 package authservice
 
 import (
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -10,6 +9,8 @@ import (
 
 type Config struct {
 	SignKey               string
+	SigningMethod         string
+	ClaimContextKey       string
 	AccessExpirationTime  time.Duration
 	RefreshExpirationTime time.Duration
 	AccessSubject         string
@@ -34,10 +35,7 @@ func (s Service) CreateRefreshToken(user entity.User) (string, error) {
 	return s.createToken(user.ID, s.config.RefreshSubject, s.config.RefreshExpirationTime)
 }
 
-func (s Service) ParseToken(bearerToken string) (*Claims, error) {
-	//https://pkg.go.dev/github.com/golang-jwt/jwt/v5#example-ParseWithClaims-CustomClaimsType
-
-	tokenStr := strings.Replace(bearerToken, "Bearer ", "", 1)
+func (s Service) ParseToken(tokenStr string) (*Claims, error) {
 
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.config.SignKey), nil
