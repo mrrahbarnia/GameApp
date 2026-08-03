@@ -22,9 +22,15 @@ func (h Handler) register(c *echo.Context) error {
 		return c.JSON(code, map[string]any{"message": msg, "errors": errFields})
 	}
 
-	if resp, err := h.userSvc.Register(req); err != nil {
+	if result, err := h.userSvc.Register(req.Name, req.PhoneNumber, req.Password); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	} else {
-		return c.JSON(http.StatusCreated, resp)
+		return c.JSON(http.StatusCreated,
+			dto.RegisterResponse{
+				UserID:      result.UserID,
+				PhoneNumber: result.PhoneNumber,
+				Name:        result.Name,
+			},
+		)
 	}
 }

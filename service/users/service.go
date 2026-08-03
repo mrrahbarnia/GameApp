@@ -5,7 +5,6 @@ import (
 
 	"github.com/mrrahbarnia/GameApp/entity"
 	"github.com/mrrahbarnia/GameApp/pkg/richerror"
-	"github.com/mrrahbarnia/GameApp/presentation/dto"
 )
 
 type Repository interface {
@@ -37,43 +36,49 @@ func New(repo Repository, bcrypt Bcrypt, authGenerator AuthGenerator) Service {
 
 // ******************************** Register usecase
 
-func (s Service) Register(req dto.RegisterRequest) (dto.RegisterResponse, error) {
-	if exist, err := s.repo.IsPhoneNumberExist(req.PhoneNumber); err != nil || exist {
+type RegisterOut struct {
+	UserID      uint
+	Name        string
+	PhoneNumber string
+}
+
+func (s Service) Register(name, phoneNumber, password string) (RegisterOut, error) {
+	if exist, err := s.repo.IsPhoneNumberExist(phoneNumber); err != nil || exist {
 		if err != nil {
 
-			return dto.RegisterResponse{},
+			return RegisterOut{},
 				richerror.New("userservice.Register").
 					WithErr(err).
 					WithKind(richerror.KindUnexpected)
 		}
 
 		if exist {
-			return dto.RegisterResponse{},
+			return RegisterOut{},
 				richerror.New("userservice.Register").
 					WithKind(richerror.KindConflict).
 					WithMessage("phone_number is already exist").
-					WithMeta(map[string]any{"phone_number": req.PhoneNumber})
+					WithMeta(map[string]any{"phone_number": phoneNumber})
 		}
 	}
 
-	hashedPassword, err := s.bcrypt.GeneratePasswordHash(req.Password)
+	hashedPassword, err := s.bcrypt.GeneratePasswordHash(password)
 	if err != nil {
-		return dto.RegisterResponse{}, fmt.Errorf("Unexpected error: %w", err)
+		return RegisterOut{}, fmt.Errorf("Unexpected error: %w", err)
 	}
 
 	user := entity.User{
 		ID:             0,
-		Name:           req.Name,
-		PhoneNumber:    req.PhoneNumber,
+		Name:           name,
+		PhoneNumber:    phoneNumber,
 		HashedPassword: hashedPassword,
 	}
 
 	createdUser, err := s.repo.Register(user)
 	if err != nil {
-		return dto.RegisterResponse{}, fmt.Errorf("Unexpected error: %w", err)
+		return RegisterOut{}, fmt.Errorf("Unexpected error: %w", err)
 	}
 
-	return dto.RegisterResponse{
+	return RegisterOut{
 		UserID:      createdUser.ID,
 		Name:        createdUser.Name,
 		PhoneNumber: createdUser.PhoneNumber,
@@ -83,29 +88,34 @@ func (s Service) Register(req dto.RegisterRequest) (dto.RegisterResponse, error)
 
 // ******************************** Login usecase
 
-func (s Service) Login(req dto.LoginRequest) (dto.LoginResponse, error) {
-	dbUser, exist, err := s.repo.GetUserByPhoneNumber(req.PhoneNumber)
+type LoginOut struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+func (s Service) Login(phoneNumber, password string) (LoginOut, error) {
+	dbUser, exist, err := s.repo.GetUserByPhoneNumber(phoneNumber)
 	if err != nil {
-		return dto.LoginResponse{}, fmt.Errorf("Unexpected error: %w", err)
+		return LoginOut{}, fmt.Errorf("Unexpected error: %w", err)
 	}
 	if !exist {
-		return dto.LoginResponse{}, fmt.Errorf("Wrong credentials")
+		return LoginOut{}, fmt.Errorf("Wrong credentials")
 	}
 
-	if !s.bcrypt.ComparePassword(dbUser.HashedPassword, req.Password) {
-		return dto.LoginResponse{}, fmt.Errorf("Wrong credentials")
+	if !s.bcrypt.ComparePassword(dbUser.HashedPassword, password) {
+		return LoginOut{}, fmt.Errorf("Wrong credentials")
 	}
 
 	accessToken, aErr := s.auth.CreateAccessToken(dbUser)
 	refreshToken, rErr := s.auth.CreateRefreshToken(dbUser)
 	if aErr != nil {
-		return dto.LoginResponse{}, fmt.Errorf("Unexpected error: %w", aErr)
+		return LoginOut{}, fmt.Errorf("Unexpected error: %w", aErr)
 	}
 	if rErr != nil {
-		return dto.LoginResponse{}, fmt.Errorf("Unexpected error: %w", rErr)
+		return LoginOut{}, fmt.Errorf("Unexpected error: %w", rErr)
 	}
 
-	return dto.LoginResponse{
+	return LoginOut{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
@@ -113,26 +123,22 @@ func (s Service) Login(req dto.LoginRequest) (dto.LoginResponse, error) {
 
 // ******************************** Get profile usecase
 
-type ProfileRequest struct {
-	UserID uint
+type ProfileOut struct {
+	Name string
 }
 
-type ProfileResponse struct {
-	Name string `json:"name"`
-}
-
-func (s Service) Profile(req ProfileRequest) (ProfileResponse, error) {
-	dbUser, exist, err := s.repo.GetUserById(req.UserID)
+func (s Service) Profile(userId uint) (ProfileOut, error) {
+	dbUser, exist, err := s.repo.GetUserById(userId)
 	if err != nil {
-		return ProfileResponse{},
-			richerror.New("userservice.Profile").WithErr(err).WithMeta(map[string]interface{}{"req": req})
+		return ProfileOut{},
+			richerror.New("userservice.Profile").WithErr(err).WithMeta(map[string]interface{}{"req": userId})
 	}
 	if !exist {
-		return ProfileResponse{},
+		return ProfileOut{},
 			richerror.New("userservice.Profile").WithKind(richerror.KindNotFound)
 	}
 
-	return ProfileResponse{
+	return ProfileOut{
 		Name: dbUser.Name,
 	}, nil
 

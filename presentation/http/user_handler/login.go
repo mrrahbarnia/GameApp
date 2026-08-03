@@ -22,9 +22,12 @@ func (h Handler) login(c *echo.Context) error {
 		return c.JSON(code, map[string]any{"message": msg, "errors": errFields})
 	}
 
-	if resp, err := h.userSvc.Login(req); err != nil {
+	if result, err := h.userSvc.Login(req.PhoneNumber, req.Password); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	} else {
-		return c.JSON(http.StatusOK, resp)
+		return c.JSON(
+			http.StatusOK,
+			dto.LoginResponse{AccessToken: result.AccessToken, RefreshToken: result.RefreshToken},
+		)
 	}
 }
